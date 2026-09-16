@@ -11,8 +11,9 @@ let port = null;
 // Runs inside the page. WhatsApp intercepts clicks on its own /send links and
 // opens the chat client-side, so this reaches the conversation without the full
 // reload that navigating the tab would cause.
+// Clicking is safe even before the app finishes booting: with no handler to
+// intercept it the browser just navigates, which is the fallback anyway.
 function clickSendLink(url) {
-  if (!document.querySelector("#pane-side")) return false; // app still booting
   const a = document.createElement("a");
   a.href = url;
   a.style.cssText = "position:fixed;left:-9999px";
