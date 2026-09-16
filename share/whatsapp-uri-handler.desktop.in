@@ -1,0 +1,11 @@
+[Desktop Entry]
+Type=Application
+Version=1.0
+Name=WhatsApp Web (whatsapp:// links)
+Comment=Opens whatsapp:// links in the WhatsApp Web PWA instead of failing for lack of a native app
+Exec=@HANDLER@ %u
+Icon=@ICON@
+StartupWMClass=crx_@APP_ID@
+Terminal=false
+NoDisplay=true
+MimeType=x-scheme-handler/whatsapp;

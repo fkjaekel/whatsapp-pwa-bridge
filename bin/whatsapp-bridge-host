@@ -1,0 +1,99 @@
+#!/usr/bin/env python3
+"""Native messaging host between the whatsapp:// handler and the extension.
+
+Chrome starts this process on behalf of the extension (connectNative).  It
+listens on a unix socket; every URL received there becomes a native message to
+the extension, which navigates the WhatsApp Web window already open.  No TCP
+port is opened and the socket only accepts WhatsApp's own URLs.
+"""
+import json
+import os
+import re
+import shutil
+import socket
+import struct
+import subprocess
+import sys
+import threading
+import time
+
+ALLOWED = re.compile(r"^https://(web|chat)\.whatsapp\.com/")
+PROFILE = os.environ.get("WHATSAPP_BRIDGE_PROFILE", "Default")
+SOCKET_NAME = "whatsapp-bridge.sock"
+PING_SECONDS = 20
+
+out_lock = threading.Lock()
+
+
+def chrome():
+    return (shutil.which("google-chrome") or shutil.which("google-chrome-stable")
+            or "/opt/google/chrome/google-chrome")
+
+
+def socket_path():
+    runtime = os.environ.get("XDG_RUNTIME_DIR") or "/run/user/%d" % os.getuid()
+    return os.path.join(runtime, SOCKET_NAME)
+
+
+def send(msg):
+    """Write one message in the native messaging framing."""
+    data = json.dumps(msg).encode()
+    with out_lock:
+        sys.stdout.buffer.write(struct.pack("<I", len(data)) + data)
+        sys.stdout.buffer.flush()
+
+
+def read_message():
+    header = sys.stdin.buffer.read(4)
+    if len(header) < 4:
+        return None
+    size = struct.unpack("<I", header)[0]
+    return json.loads(sys.stdin.buffer.read(size) or b"null")
+
+
+def serve_socket():
+    path = socket_path()
+    try:
+        os.unlink(path)
+    except FileNotFoundError:
+        pass
+    server = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
+    server.bind(path)
+    os.chmod(path, 0o600)
+    server.listen(8)
+    while True:
+        conn, _ = server.accept()
+        with conn:
+            url = conn.recv(8192).decode(errors="replace").strip()
+        if ALLOWED.match(url):
+            send({"type": "open", "url": url})
+
+
+def keepalive():
+    """Keep the extension's service worker alive; it dies when idle."""
+    while True:
+        time.sleep(PING_SECONDS)
+        send({"type": "ping"})
+
+
+def main():
+    for target in (serve_socket, keepalive):
+        threading.Thread(target=target, daemon=True).start()
+    while True:
+        msg = read_message()
+        if msg is None:
+            break  # extension disconnected: Chrome is shutting this process down
+        # PWA closed: the extension hands the URL back and we open an app window.
+        if msg.get("type") == "fallback" and ALLOWED.match(msg.get("url", "")):
+            subprocess.Popen(
+                [chrome(), "--profile-directory=" + PROFILE, "--app=" + msg["url"]],
+                stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL,
+                start_new_session=True)
+    try:
+        os.unlink(socket_path())
+    except OSError:
+        pass
+
+
+if __name__ == "__main__":
+    main()

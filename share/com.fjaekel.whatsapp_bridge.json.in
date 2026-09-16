@@ -1,0 +1,7 @@
+{
+  "name": "com.fjaekel.whatsapp_bridge",
+  "description": "Local bridge from the whatsapp:// handler to the WhatsApp Web PWA",
+  "path": "@HOST@",
+  "type": "stdio",
+  "allowed_origins": ["chrome-extension://@EXT_ID@/"]
+}

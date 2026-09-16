@@ -1,0 +1,100 @@
+#!/usr/bin/env python3
+"""Handler for whatsapp:// URIs on Linux.
+
+Links from wa.me hand the browser a whatsapp:// URI (the "Open app" button).
+Linux has no native WhatsApp client to claim that scheme, so the click dies in
+a "No Apps available" dialog.  This rewrites the URI to its web.whatsapp.com
+equivalent and hands it to the bridge extension over a unix socket, which
+navigates the WhatsApp Web PWA window that is already open.
+
+With the bridge down it falls back to a Chrome app window (--app), which opens
+the right chat but in a window of its own.  That fallback exists because Chrome
+offers no command-line way into an open PWA window: "open supported links in
+this app" only captures links clicked inside web content, and --app-id ignores
+any URL and always lands on the app's start_url.
+"""
+import os
+import re
+import shutil
+import socket
+import subprocess
+import sys
+import urllib.parse
+
+PROFILE = os.environ.get("WHATSAPP_BRIDGE_PROFILE", "Default")
+HOME = "https://web.whatsapp.com/"
+SOCKET_NAME = "whatsapp-bridge.sock"
+
+
+def chrome():
+    return (shutil.which("google-chrome") or shutil.which("google-chrome-stable")
+            or "/opt/google/chrome/google-chrome")
+
+
+def pwa_app_id():
+    """Chrome's app id for the installed WhatsApp Web PWA, from its .desktop file."""
+    apps = os.path.expanduser("~/.local/share/applications")
+    for name in sorted(os.listdir(apps)):
+        if not (name.startswith("chrome-") and name.endswith(".desktop")):
+            continue
+        entry = open(os.path.join(apps, name), errors="replace").read()
+        if re.search(r"^Name=WhatsApp", entry, re.M):
+            found = re.search(r"--app-id=(\w+)", entry)
+            if found:
+                return found.group(1)
+    return None
+
+
+def translate(uri):
+    """whatsapp:// URI -> WhatsApp Web URL. Anything else passes through."""
+    parts = urllib.parse.urlsplit(uri)
+    if parts.scheme != "whatsapp":
+        return uri
+    action = (parts.netloc or parts.path).strip("/").lower()
+    query = urllib.parse.parse_qs(parts.query, keep_blank_values=True)
+
+    code = (query.get("code") or [""])[0]
+    if action == "chat" and code:
+        return "https://chat.whatsapp.com/" + urllib.parse.quote(code)
+
+    phone = re.sub(r"\D", "", (query.get("phone") or [""])[0])
+    text = (query.get("text") or [""])[0]
+    params = [(k, v) for k, v in (("phone", phone), ("text", text)) if v]
+    if not params:
+        return HOME
+    return HOME + "send?" + urllib.parse.urlencode(params)
+
+
+def send_to_bridge(url):
+    """Hand the URL to the extension, which reuses the open PWA window."""
+    runtime = os.environ.get("XDG_RUNTIME_DIR") or "/run/user/%d" % os.getuid()
+    sock = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
+    sock.settimeout(2)
+    try:
+        sock.connect(os.path.join(runtime, SOCKET_NAME))
+        sock.sendall(url.encode())
+        return True
+    except OSError:
+        return False
+    finally:
+        sock.close()
+
+
+def main():
+    uri = sys.argv[1] if len(sys.argv) > 1 else HOME
+    url = translate(uri)
+    if url != HOME and send_to_bridge(url):
+        return
+    cmd = [chrome(), "--profile-directory=" + PROFILE]
+    app_id = pwa_app_id()
+    # No target chat: focus the PWA itself rather than open a second window.
+    if url == HOME and app_id:
+        cmd.append("--app-id=" + app_id)
+    else:
+        cmd.append("--app=" + url)
+    subprocess.Popen(cmd, start_new_session=True,
+                     stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+
+
+if __name__ == "__main__":
+    main()
