@@ -1,15 +1,19 @@
 {
   "manifest_version": 3,
   "name": "WhatsApp PWA bridge",
-  "version": "1.0",
-  "description": "Abre links whatsapp:// na janela ja aberta do PWA do WhatsApp Web.",
-  "key": "MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAmKS3TX90Azyvsy/LWqvl4t6nyYmqy3uRUgLw/OBIY+Z7uTTKl7LyVlrqXFPVL0h1skZkKYH/+wNFacvbmhsxcpt2yCby9H3WSTzHJxVyfNeujFBD9UOdiv0H78JoSX2Pwr6NrsG70tPDZBm0BDmuDY4wvsA8lHEEDDXfLHLq6Ux6vfwMatQPxKTuINvm6pOYUWLclhNzQux5Ih16/1ETGNGFuEVR+2xEG623Wgnq/03bbcPbExxX7/FrQQ1wE8jqBo4fPaF3aG+s66vNhoODhSdwCfBvgiYF4PIHfgXQn6c9/q8L/aksau0KlOYwj4zZauSe61KxkdkRdfQH3LOiUQIDAQAB",
+  "version": "1.1",
+  "description": "Opens whatsapp:// links in the WhatsApp Web PWA window that is already running.",
   "permissions": [
     "tabs",
     "nativeMessaging",
-    "alarms"
+    "alarms",
+    "scripting"
   ],
   "background": {
     "service_worker": "background.js"
-  }
+  },
+  "host_permissions": [
+    "https://web.whatsapp.com/*"
+  ],
+  "key": "MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAmKS3TX90Azyvsy/LWqvl4t6nyYmqy3uRUgLw/OBIY+Z7uTTKl7LyVlrqXFPVL0h1skZkKYH/+wNFacvbmhsxcpt2yCby9H3WSTzHJxVyfNeujFBD9UOdiv0H78JoSX2Pwr6NrsG70tPDZBm0BDmuDY4wvsA8lHEEDDXfLHLq6Ux6vfwMatQPxKTuINvm6pOYUWLclhNzQux5Ih16/1ETGNGFuEVR+2xEG623Wgnq/03bbcPbExxX7/FrQQ1wE8jqBo4fPaF3aG+s66vNhoODhSdwCfBvgiYF4PIHfgXQn6c9/q8L/aksau0KlOYwj4zZauSe61KxkdkRdfQH3LOiUQIDAQAB"
 }

@@ -13,7 +13,7 @@ wa.me link  ->  xdg-open  ->  whatsapp-uri-handler   (rewrites to web.whatsapp.c
                                     |
                            whatsapp-bridge-host      (native messaging)
                                     |
-                              Chrome extension       (chrome.tabs.update on the PWA tab)
+                              Chrome extension       (clicks the link inside the PWA page)
 ```
 
 | Piece | Role |
@@ -22,7 +22,7 @@ wa.me link  ->  xdg-open  ->  whatsapp-uri-handler   (rewrites to web.whatsapp.c
 | `share/whatsapp-uri-handler.desktop.in` | registers the handler for `x-scheme-handler/whatsapp` |
 | `bin/whatsapp-bridge-host` | native messaging host; listens on the socket, forwards the URL to the extension |
 | `share/com.fjaekel.whatsapp_bridge.json.in` | allowlists the host for this extension id |
-| `extension/` | navigates the open PWA tab and focuses its window |
+| `extension/` | clicks the link inside the open PWA page and focuses its window |
 
 Group invites (`whatsapp://chat?code=…`) are translated too.
 
@@ -69,7 +69,13 @@ Chrome exposes no command-line way to navigate an open PWA window:
 - The socket is a unix socket at `$XDG_RUNTIME_DIR/whatsapp-bridge.sock`, mode
   0600, and both ends drop anything that is not a `web`/`chat.whatsapp.com` URL.
   No TCP port is opened.
-- WhatsApp restores a chat's saved draft over the link's `text=` parameter, so a
-  prefilled message is dropped when that chat already has one.
+- The chat opens **without reloading** the app: WhatsApp intercepts clicks on its
+  own `/send` links and switches conversation client-side, so the extension
+  injects such a click rather than navigating the tab, which would restart
+  WhatsApp Web. Navigation is still the fallback when the app is mid-boot or the
+  injection is refused.
+- A chat's saved draft survives the link's `text=` parameter: on the injected
+  click the link's text is appended to the draft, and on a fallback navigation
+  the draft wins and the text is dropped.
 - The extension's service worker is killed when idle; the host pings it every 20s
   and an alarm reconnects it, which is what keeps the bridge answering.

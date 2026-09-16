@@ -3,9 +3,24 @@
 // new window.
 const HOST = "com.fjaekel.whatsapp_bridge";
 const ALLOWED = /^https:\/\/(web|chat)\.whatsapp\.com\//;
+const SEND = /^https:\/\/web\.whatsapp\.com\/send\?/;
 const PWA_TAB = "https://web.whatsapp.com/*";
 
 let port = null;
+
+// Runs inside the page. WhatsApp intercepts clicks on its own /send links and
+// opens the chat client-side, so this reaches the conversation without the full
+// reload that navigating the tab would cause.
+function clickSendLink(url) {
+  if (!document.querySelector("#pane-side")) return false; // app still booting
+  const a = document.createElement("a");
+  a.href = url;
+  a.style.cssText = "position:fixed;left:-9999px";
+  document.body.appendChild(a);
+  a.click();
+  setTimeout(() => a.remove(), 0);
+  return true;
+}
 
 async function openInPwa(url) {
   if (!ALLOWED.test(url)) return false;
@@ -15,7 +30,25 @@ async function openInPwa(url) {
   const wins = await chrome.windows.getAll({ populate: false });
   const kind = Object.fromEntries(wins.map((w) => [w.id, w.type]));
   const tab = tabs.find((t) => kind[t.windowId] === "app") || tabs[0];
-  await chrome.tabs.update(tab.id, { url, active: true });
+
+  let opened = false;
+  if (SEND.test(url)) {
+    try {
+      const [injected] = await chrome.scripting.executeScript({
+        target: { tabId: tab.id },
+        func: clickSendLink,
+        args: [url],
+      });
+      opened = injected?.result === true;
+    } catch (e) {
+      opened = false; // injection blocked: fall back to navigating
+    }
+  }
+  if (opened) {
+    await chrome.tabs.update(tab.id, { active: true });
+  } else {
+    await chrome.tabs.update(tab.id, { url, active: true });
+  }
   await chrome.windows.update(tab.windowId, { focused: true });
   return true;
 }
