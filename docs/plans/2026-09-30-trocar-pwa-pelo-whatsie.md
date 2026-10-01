@@ -78,10 +78,30 @@ sutil.
 - Se o repo já estiver arquivado, rode antes
   `GH_TOKEN=$(env -u GITHUB_TOKEN -u GH_TOKEN gh auth token --user fkjaekel) gh repo unarchive fkjaekel/whatsapp-pwa-bridge --yes`.
 
+## Notas da execução (2026-09-30 e 2026-10-01)
+
+- Step 2: o `flatpak install` falhava com `fusermount3: mount failed: Operation not permitted`, pela CLI e
+  pelo Software Manager. O `/usr/bin/fusermount3` estava sem o bit setuid (`0755`); `sudo apt install
+  --reinstall fuse3` devolveu o `4755` e a instalação passou.
+- Cursor: sobre os itens clicáveis aparecia a mão torta da fonte de cursores do X. O Qt 6 carrega cursor
+  pela `libxcb-cursor`, que lê o caminho de `XCURSOR_PATH` mas o nome do tema só do recurso `Xcursor.theme`
+  do X, e o tema do host (Bibata) só existe no sandbox em `/run/host/share/icons`. Ficaram dois ajustes:
+  `flatpak override --user com.ktechpit.whatsie --env=XCURSOR_PATH=/run/host/user-share/icons:/run/host/share/icons:/usr/share/icons --env=XCURSOR_SIZE=24`
+  e `~/.Xresources` com `Xcursor.theme: Bibata-Modern-Classic` e `Xcursor.size: 24`.
+- Corretor ortográfico: o whatsie só traz 7 dicionários, sem pt-BR. O `pt-BR-3-0.bdic` de
+  `~/.config/google-chrome/Dictionaries/` foi copiado como `pt-BR.bdic` para
+  `~/.var/app/com.ktechpit.whatsie/data/ktechpit/whatsie/qtwebengine_dictionaries/`, e o `whatsie.conf`
+  ganhou `[spellcheck] languages=pt-BR`.
+- Step 4: já existia um autostart criado pelo "Aplicativos de inicialização" do Cinnamon, sem
+  `--minimized`; foi substituído pelo conteúdo do plano.
+- Step 6: o `bridge.log` da ponte whatsmeow parou em 15/09; o log vivo é
+  `journalctl --user -u whatsapp-bridge.service`.
+- Rollback extra: `flatpak override --user --reset com.ktechpit.whatsie` e `rm ~/.Xresources`.
+
 ## Steps
 
 ### Step 1: Baseline antes de mexer
-Status: pending
+Status: done
 Dependencies: none
 Files: nenhum (só leitura)
 Context: registre na sessão:
@@ -92,14 +112,14 @@ Context: registre na sessão:
 Success: os quatro valores conferem. Qualquer divergência para a execução e vira pergunta.
 
 ### Step 2: Instalar o whatsie pelo Flathub
-Status: pending
+Status: done
 Dependencies: 1
 Files: `/var/lib/flatpak/` (instalação de sistema)
 Context: `flatpak install -y --noninteractive flathub com.ktechpit.whatsie`. Se o polkit pedir senha, não insista. Instale como usuário com `flatpak remote-add --user --if-not-exists flathub https://dl.flathub.org/repo/flathub.flatpakrepo` seguido de `flatpak install --user -y flathub com.ktechpit.whatsie`, e nos passos seguintes troque `/var/lib/flatpak/exports` por `~/.local/share/flatpak/exports`.
 Success: `flatpak info com.ktechpit.whatsie` mostra versão 6.1.1 ou maior, e `grep MimeType /var/lib/flatpak/exports/share/applications/com.ktechpit.whatsie.desktop` devolve `x-scheme-handler/whatsapp;`.
 
 ### Step 3: Vincular o whatsie e configurar bandeja e notificações
-Status: pending
+Status: done
 Dependencies: 2
 Manual: true
 Files: `~/.var/app/com.ktechpit.whatsie/` (perfil e configurações do app)
@@ -112,7 +132,7 @@ Se aparecer "No system tray was detected", pare: o sandbox não enxergou a bande
 Success: as conversas carregam; o ícone aparece na bandeja; depois de fechar a janela, `flatpak ps` ainda lista `com.ktechpit.whatsie`; uma mensagem recebida gera notificação e contador no ícone.
 
 ### Step 4: Autostart minimizado
-Status: pending
+Status: done
 Dependencies: 3
 Files: `~/.config/autostart/com.ktechpit.whatsie.desktop` (novo)
 Context: escreva o arquivo com este conteúdo:
@@ -128,14 +148,14 @@ A opção `--minimized` é "Start hidden in the system tray" (`src/app/cli_optio
 Success: `desktop-file-validate` não acusa erro. Com o app encerrado (`flatpak kill com.ktechpit.whatsie`), rodar o `Exec` faz o whatsie subir só na bandeja, sem janela.
 
 ### Step 5: Apontar `whatsapp://` para o whatsie
-Status: pending
+Status: done
 Dependencies: 3
 Files: `~/.config/mimeapps.list`
 Context: rode `xdg-mime default com.ktechpit.whatsie.desktop x-scheme-handler/whatsapp`. Sem isso o whatsie fica só como candidato, porque a linha `x-scheme-handler/whatsapp=whatsapp-uri-handler.desktop`, gravada em `[Default Applications]` pelo `install.sh` deste repo, ganha de qualquer app instalado depois.
 Success: `xdg-mime query default x-scheme-handler/whatsapp` devolve `com.ktechpit.whatsie.desktop`. `xdg-open 'whatsapp://send?text=teste-handler'` abre no whatsie já aberto, sem segunda janela, e nada é enviado sem clique seu. O botão de abrir o app numa página wa.me no Chrome leva ao aviso do `xdg-open` e abre no whatsie.
 
 ### Step 6: Desconectar e desinstalar o PWA
-Status: pending
+Status: in-progress (PWA desconectado em 2026-10-01; falta desinstalar em chrome://apps)
 Dependencies: 5
 Manual: true
 Files: os três arquivos do PWA geridos pelo Chrome (tabela acima)
@@ -143,7 +163,7 @@ Context: primeiro, dentro do PWA: menu ⋮ da lista de conversas → Desconectar
 Success: somem o launcher e o autostart do PWA, e a entrada dele em `user-chrome-apps.menu`. Se o autostart ficar para trás, a sessão apaga à mão; o `.menu` é reescrito pelo Chrome e não deve ser editado. `systemctl --user is-active whatsapp-bridge.service` continua `active`, e `~/.local/share/whatsapp-bridge-store/bridge.log` não registra logout depois deste passo.
 
 ### Step 7: Remover a extensão da ponte
-Status: pending
+Status: done
 Dependencies: 6
 Manual: true
 Files: perfil do Chrome
@@ -151,14 +171,14 @@ Context: em `chrome://extensions`, remova a extensão descompactada de id `mkcgb
 Success: `ss -xlp | grep whatsapp-bridge.sock` não devolve nada.
 
 ### Step 8: Apagar do host as peças deste repo
-Status: pending
+Status: done
 Dependencies: 7
 Files: `~/.local/bin/whatsapp-uri-handler`, `~/.local/bin/whatsapp-bridge-host`, `~/.local/share/applications/whatsapp-uri-handler.desktop`, `~/.config/google-chrome/NativeMessagingHosts/com.fjaekel.whatsapp_bridge.json` e `/run/user/1000/whatsapp-bridge.sock`, se tiver sobrado
 Context: antes de apagar, confirme com `readlink` que os dois binários são symlinks para este checkout. O `~/.local/bin/whatsapp-bridge`, sem sufixo e em ELF, não é deste repo. Depois rode `update-desktop-database ~/.local/share/applications`.
 Success: `grep -c whatsapp-uri-handler ~/.local/share/applications/mimeinfo.cache ~/.config/mimeapps.list` dá 0 nos dois arquivos; `xdg-mime query default x-scheme-handler/whatsapp` segue em `com.ktechpit.whatsie.desktop`; `systemctl --user is-active whatsapp-bridge.service` dá `active`.
 
 ### Step 9: Tirar o WhatsApp do helper de posicionamento
-Status: pending
+Status: done
 Dependencies: 6
 Files: `~/.local/bin/place-pwas-on-laptop` (não versionado; copie antes para `place-pwas-on-laptop.bak-20260930` na mesma pasta)
 Context: no JS, remova `"crx_hnpfjngllnobngcgfapefoaidbinmjnm"` do array `ids` e troque "(Outlook, WhatsApp)" por "(Outlook)" no comentário do topo. O `.desktop` de autostart do helper não muda.
