@@ -100,9 +100,9 @@ sutil.
   autostart, o launcher e a entrada de menu do PWA sumiram; o helper rodou sem erro. O que só um login
   real mostra é o Cinnamon disparando o autostart e o Xsession carregando o `~/.Xresources`
   (`/etc/X11/Xsession.d/30x11-common_xresources`).
-- Pendência: abrir issue no upstream (https://github.com/keshavbhatt/whatsie/issues) pedindo o ajuste do
-  cursor no Flatpak, citando https://github.com/keshavbhatt/whatsie/issues/237, fechada com pedido de
-  reabrir se persistir na 6.x.
+- Issue do cursor aberta no upstream em 2026-10-01: https://github.com/keshavbhatt/whatsie/issues/386
+  (continuação da https://github.com/keshavbhatt/whatsie/issues/237). Se o ajuste entrar no Flatpak, o
+  override de `XCURSOR_PATH` e o `~/.Xresources` deixam de ser necessários.
 - Rollback extra: `flatpak override --user --reset com.ktechpit.whatsie` e `rm ~/.Xresources`.
 
 ## Steps
@@ -207,7 +207,7 @@ Context: o README ganha no topo a linha "Aposentado em <data>: substituído pelo
 Success: `git log --oneline -1 origin/main` mostra o commit, e a memória está atualizada.
 
 ### Step 12: Arquivar o repo no GitHub
-Status: aprovado em 2026-10-01; roda depois de publicada a issue do cursor
+Status: done
 Dependencies: 11
 Manual: true
 Files: nenhum local
