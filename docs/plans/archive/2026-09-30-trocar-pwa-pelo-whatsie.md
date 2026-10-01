@@ -96,6 +96,13 @@ sutil.
   `--minimized`; foi substituído pelo conteúdo do plano.
 - Step 6: o `bridge.log` da ponte whatsmeow parou em 15/09; o log vivo é
   `journalctl --user -u whatsapp-bridge.service`.
+- Step 10 sem logout: o `Exec` do autostart foi rodado com o app encerrado e subiu só na bandeja; o
+  autostart, o launcher e a entrada de menu do PWA sumiram; o helper rodou sem erro. O que só um login
+  real mostra é o Cinnamon disparando o autostart e o Xsession carregando o `~/.Xresources`
+  (`/etc/X11/Xsession.d/30x11-common_xresources`).
+- Pendência: abrir issue no upstream (https://github.com/keshavbhatt/whatsie/issues) pedindo o ajuste do
+  cursor no Flatpak, citando https://github.com/keshavbhatt/whatsie/issues/237, fechada com pedido de
+  reabrir se persistir na 6.x.
 - Rollback extra: `flatpak override --user --reset com.ktechpit.whatsie` e `rm ~/.Xresources`.
 
 ## Steps
@@ -155,7 +162,7 @@ Context: rode `xdg-mime default com.ktechpit.whatsie.desktop x-scheme-handler/wh
 Success: `xdg-mime query default x-scheme-handler/whatsapp` devolve `com.ktechpit.whatsie.desktop`. `xdg-open 'whatsapp://send?text=teste-handler'` abre no whatsie já aberto, sem segunda janela, e nada é enviado sem clique seu. O botão de abrir o app numa página wa.me no Chrome leva ao aviso do `xdg-open` e abre no whatsie.
 
 ### Step 6: Desconectar e desinstalar o PWA
-Status: in-progress (PWA desconectado em 2026-10-01; falta desinstalar em chrome://apps)
+Status: done
 Dependencies: 5
 Manual: true
 Files: os três arquivos do PWA geridos pelo Chrome (tabela acima)
@@ -185,7 +192,7 @@ Context: no JS, remova `"crx_hnpfjngllnobngcgfapefoaidbinmjnm"` do array `ids` e
 Success: `bash -n` passa; `grep -c hnpfjng` dá 0; `PWA_PLACE_ACTIVE=4 ~/.local/bin/place-pwas-on-laptop` termina, e `journalctl -t place-pwas-on-laptop --since -2min` mostra `iniciado` e `concluido`, sem `ERR`.
 
 ### Step 10: Validar no próximo login
-Status: pending
+Status: done (validado por componente em 2026-10-01, sem novo login; o próximo login natural confirma)
 Dependencies: 4, 8, 9
 Manual: true
 Files: nenhum
@@ -193,14 +200,14 @@ Context: saia e entre de novo na sessão, ou reinicie a máquina.
 Success: o whatsie está na bandeja, sem janela; o Outlook abre no eDP-1; nenhum PWA do WhatsApp subiu; `whatsapp-bridge.service` está `active`; um link wa.me no Chrome abre no whatsie.
 
 ### Step 11: Registrar e aposentar o repo
-Status: pending
+Status: done
 Dependencies: 10
 Files: `README.md` deste repo; este plano; `~/.claude/projects/-home-fjaekel/memory/cinnamon-pwa-window-placement.md` e a linha dela no `MEMORY.md`
 Context: o README ganha no topo a linha "Aposentado em <data>: substituído pelo whatsie (Flathub `com.ktechpit.whatsie`), que registra `x-scheme-handler/whatsapp` sozinho. Para reinstalar, `./install.sh`, que exige o PWA." No mesmo commit, `git mv` este plano para `docs/plans/archive/`. Como o commit só tem doc, o push vai direto na `main`. Na memória, registre que o helper agora move só o Outlook e que o WhatsApp virou o whatsie Flatpak na bandeja; se o diretório de memória estiver versionado no `claude-settings`, faça commit e push lá também.
 Success: `git log --oneline -1 origin/main` mostra o commit, e a memória está atualizada.
 
 ### Step 12: Arquivar o repo no GitHub
-Status: pending
+Status: aprovado em 2026-10-01; roda depois de publicada a issue do cursor
 Dependencies: 11
 Manual: true
 Files: nenhum local
