@@ -1,5 +1,7 @@
 # whatsapp-pwa-bridge
 
+> Aposentado em 2026-10-01: substituído pelo whatsie (Flathub `com.ktechpit.whatsie`), que registra `x-scheme-handler/whatsapp` sozinho. Para reinstalar, `./install.sh`, que exige o PWA.
+
 Makes `whatsapp://` links — the "Open app" button on every `wa.me` page — open in
 the WhatsApp Web PWA window you already have running on Linux, instead of dying
 in a *"No Apps available"* dialog.
